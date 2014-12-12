@@ -1,0 +1,130 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.TextView;
+
+public class CampaignMain extends Activity {
+	/** Called when the activity is first created. */
+	final String DEBUG_TAG = "sr_defcon_CampaignMain";
+	TextView introText;
+	Button enterButton;
+	int expiredCounter;
+	
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		
+		enterButton = (Button) findViewById(R.id.button1);
+	
+		expiredCounter = workPref("read", "expiredCouter", 0);
+		if (expiredCounter > 10) {
+			enterButton.setText(R.string.expiredCounter);
+		}
+		else {
+			enterButton.setOnClickListener(mButtonPressed);
+		}
+					
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();	
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+				
+		introText = (TextView) findViewById(R.id.Text1); 
+		if (!(getResources().getConfiguration().orientation == 1))	{		
+			introText.setVisibility(View.GONE);
+		}
+
+		
+		//check if we have a campaign job
+		String thisCampaignNumber = workPrefString("read", "thisCampaignNumber", "");
+		if (thisCampaignNumber.length() > 0) {
+			//remove thisCampaignNumber from job
+			workPrefString("write", "thisCampaignNumber", "");
+			//SuprRachl in Action
+			Intent callintent = new Intent(Intent.ACTION_CALL);
+			callintent.setData(Uri.parse("tel:" + thisCampaignNumber));
+			startActivity(callintent);
+		}		
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+	}
+
+	public void onEnterButtonPressed() {
+		
+		expiredCounter = workPref("read", "expiredCouter", 0);
+		if (expiredCounter > 10) {
+			enterButton.setText(R.string.expiredCounter);
+		}
+		else {
+			expiredCounter++;
+			expiredCounter = workPref("write", "expiredCouter", expiredCounter);
+			Intent i = new Intent();
+			i.setClassName("supr.rachl.ftc.defcon2014", "supr.rachl.ftc.defcon2014.ItemListActivity");
+			startActivity(i);
+		}
+	}
+	
+	View.OnClickListener mButtonPressed = new OnClickListener() {
+		public void onClick(View v) {
+			onEnterButtonPressed();
+		}
+	};
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+	}
+	
+	public int workPref(String type, String pref, int value) {
+		int thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, 0);
+			mPref.edit().putInt(pref, value).commit();
+			return value;
+		} else
+			return -1;
+	}
+	
+	public String workPrefString(String type, String pref, String value) {
+		String thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, "");
+			mPref.edit().putString(pref, value).commit();
+			return value;
+		} else
+			return "error";
+	}
+
+
+}

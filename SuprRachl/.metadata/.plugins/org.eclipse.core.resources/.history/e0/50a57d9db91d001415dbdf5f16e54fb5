@@ -1,0 +1,237 @@
+package supr.rachl.ftc.defcon2014;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Random;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+
+import srt.devlab.com.dummy.DummyContent;
+import android.content.Context;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Handler;
+import android.support.v4.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.TextView;
+
+/**
+ * A fragment representing a single Item detail screen.
+ * This fragment is either contained in a {@link ItemListActivity}
+ * in two-pane mode (on tablets) or a {@link ItemDetailActivity}
+ * on handsets.
+ */
+public class ItemDetailFragment extends Fragment {
+	
+	Handler handler; 
+	private static final String DEBUG_TAG = "srt_ItemDetailFragment";
+	private sendReportServer m_sendReportServer;
+	
+	/**
+	 * The fragment argument representing the item ID that this fragment
+	 * represents.
+	 */
+	public static final String ARG_ITEM_ID = "item_id";
+
+	/**
+	 * The dummy content this fragment is presenting.
+	 */
+	private DummyContent.DummyItem mItem;
+
+	/**
+	 * Mandatory empty constructor for the fragment manager to instantiate the
+	 * fragment (e.g. upon screen orientation changes).
+	 */
+	public ItemDetailFragment() {
+	}
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+
+		if (getArguments().containsKey(ARG_ITEM_ID)) {
+			// Load the dummy content specified by the fragment
+			// arguments. In a real-world scenario, use a Loader
+			// to load content from a content provider.
+			mItem = DummyContent.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
+		}
+	}
+
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+			Bundle savedInstanceState) {
+		View rootView = inflater.inflate(R.layout.fragment_item_detail, container, false);
+
+		final WebView browser = (WebView) rootView.findViewById(R.id.webview);
+		
+		//Clear cache from prior sessions
+		browser.clearCache(true);
+		
+		WebSettings webSettings = browser.getSettings();
+		
+		//assign a random PC UserAgent
+		String[] uachoice = {
+		        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:29.0) Gecko/20100101 Firefox/29.0",
+		        "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36",
+		        "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:29.0) Gecko/20100101 Firefox/29.0"
+		    };
+		//random number between 0 and 2
+		Random r = new Random();
+		int myrandomua = r.nextInt(3);
+		webSettings.setUserAgentString(uachoice[myrandomua]);
+		/* JavaScript must be enabled if you want it to work, obviously */ 		
+		webSettings.setJavaScriptEnabled(true);
+
+		/* Register a new JavaScript interface called HTMLOUT */
+		browser.addJavascriptInterface(new MyJavaScriptInterface(browser.getContext()), "HTMLOUT"); 
+		
+		/* WebViewClient must be set BEFORE calling loadUrl! */  
+		browser.setWebViewClient(new WebViewClient() {  
+			
+			@Override  
+			public void onPageFinished(WebView view, String url)  
+			{  
+				
+				//Log.i(DEBUG_TAG , "Wait for page to fully load...");
+				
+				// wait for cloud fare check to complete
+				handler = new Handler();
+
+				final Runnable r = new Runnable()
+				{
+				    public void run() 
+				    {
+				    	//Log.i(DEBUG_TAG , "Page fully loaded...");
+				    	// This call inject JavaScript into the page which just finished loading.  
+						browser.loadUrl("javascript:window.HTMLOUT.showHTML('<head>'+document.getElementsByTagName('html')[0].innerHTML+'</head>');");                
+				    }
+				};
+				handler.postDelayed(r, 10000);				
+			}  
+		});  
+
+		/* load a web page */  
+		browser.loadUrl(mItem.url); 
+
+		// Show the dummy content as text in a TextView.
+		if (mItem != null) {
+			((TextView) rootView.findViewById(R.id.item_detail)).setText(mItem.content);
+		}
+
+		return rootView;
+	}
+
+	/* An instance of this class will be registered as a JavaScript interface */  
+	public class MyJavaScriptInterface   
+	{  
+		Context mContext;
+
+		/** Instantiate the interface and set the context */
+		MyJavaScriptInterface(Context c) {
+			mContext = c;
+		}
+		@JavascriptInterface
+		public void showHTML(String html)  
+		{  
+        	
+        	// import via API
+        	Calendar c = Calendar.getInstance();
+        	int key_int = c.get(Calendar.DAY_OF_MONTH)*169;
+        	String key = String.valueOf(key_int);
+        	String acc = "Log: " + mItem.content;
+        	String msg = html;
+			sendReportServerParams params = new sendReportServerParams("http://www.numcop.com/data/researchpartner/import.php", 
+					key, acc, msg);
+			m_sendReportServer = new sendReportServer();
+			m_sendReportServer.execute(params);
+			
+			//send via email
+			/*
+			Intent intent = new Intent(Intent.ACTION_SENDTO); // it's not ACTION_SEND
+        	intent.setType("text/plain");
+        	intent.putExtra(Intent.EXTRA_SUBJECT, "Log: " + mItem.content);
+        	intent.putExtra(Intent.EXTRA_TEXT, html);
+        	intent.setData(Uri.parse("mailto:report@numbercop.com")); 
+        	intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); 
+        	startActivity(intent);
+        	*/
+		}  
+	}
+	
+	class sendReportServer extends AsyncTask<sendReportServerParams, Void, String> {
+		@Override
+		protected String doInBackground(sendReportServerParams... params) {
+			String response = "";			
+			//attaching params
+
+			String url = params[0].sendReporturl;
+			String key = params[0].key;
+			String acc = params[0].acc;
+			String msg = params[0].msg;
+			
+				List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+				nameValuePairs.add(new BasicNameValuePair("key", key));
+				nameValuePairs.add(new BasicNameValuePair("acc", acc));
+				nameValuePairs.add(new BasicNameValuePair("msg", msg));
+				
+				DefaultHttpClient client = new DefaultHttpClient();
+				//DEV LAB CREDENTIALS
+				UsernamePasswordCredentials creds = new UsernamePasswordCredentials("devlab", "devlab16");
+				client.getCredentialsProvider().setCredentials(new AuthScope(AuthScope.ANY_HOST, AuthScope.ANY_PORT), creds);
+
+				try {
+					HttpPost httpPost = new HttpPost(url);
+		            httpPost.setHeader("Content-Type","application/x-www-form-urlencoded;charset=UTF-8");
+		            httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
+					HttpResponse execute = client.execute(httpPost);
+					InputStream content = execute.getEntity().getContent();
+					BufferedReader buffer = new BufferedReader(new InputStreamReader(content));
+					String s = "";
+					while ((s = buffer.readLine()) != null) {
+						response += s;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				//check if tasks was cancelled
+				if (isCancelled()) {
+					//Log.i(DEBUG_TAG, "AsynchTask was cancelled");
+					return null;
+				}
+			return response;
+		}
+		@Override
+		protected void onPostExecute(String result) {
+			//Log.i(DEBUG_TAG, "sendReportServer response from server: " + result);
+		}
+	}
+	
+	private static class sendReportServerParams {
+		String sendReporturl, key, acc, msg;
+		
+		sendReportServerParams (String sendReporturl, String key, String acc, String msg) {
+			this.sendReporturl = sendReporturl;
+			this.key = key;
+			this.acc = acc;
+			this.msg = msg;
+		}
+	}
+}

@@ -1,0 +1,68 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.TextView;
+
+public class CampaignMain extends Activity {
+	/** Called when the activity is first created. */
+	final String DEBUG_TAG = "sr_defcon_CampaignMain";
+	TextView introText;
+	Button enterButton;
+	
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		
+		enterButton = (Button) findViewById(R.id.button1);
+		enterButton.setOnClickListener(mButtonPressed);
+					
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();	
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+				
+		introText = (TextView) findViewById(R.id.Text1); 
+		if (!(getResources().getConfiguration().orientation == 1))	{		
+			introText.setVisibility(View.GONE);
+		}
+		
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+		// Google Analytics Stop
+	}
+
+	public void onEnterButtonPressed() {
+		Intent i = new Intent();
+		i.setClassName("supr.rachl.ftc.defcon2014", "supr.rachl.ftc.defcon2014.ItemListActivity");
+		startActivity(i);
+		finish();
+	}
+	
+	View.OnClickListener mButtonPressed = new OnClickListener() {
+		public void onClick(View v) {
+			onEnterButtonPressed();
+		}
+	};
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+	}
+
+
+}

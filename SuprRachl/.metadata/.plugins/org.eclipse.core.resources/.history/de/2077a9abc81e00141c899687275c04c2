@@ -1,0 +1,112 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.SystemClock;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.NavUtils;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+
+/**
+ * An activity representing a single Item detail screen. This
+ * activity is only used on handset devices. On tablet-size devices,
+ * item details are presented side-by-side with a list of items
+ * in a {@link ItemListActivity}.
+ * <p>
+ * This activity is mostly just a 'shell' activity containing nothing
+ * more than a {@link ItemDetailFragment}.
+ */
+public class ItemDetailActivity extends FragmentActivity {
+	
+	private PendingIntent mAlarmSender;
+	Button cancelButton;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_item_detail);
+
+        // Show the Up button in the action bar.
+        getActionBar().setDisplayHomeAsUpEnabled(true);
+
+        if (savedInstanceState == null) {
+            // Create the detail fragment and add it to the activity
+            // using a fragment transaction.
+            Bundle arguments = new Bundle();
+            arguments.putString(ItemDetailFragment.ARG_ITEM_ID,
+                    getIntent().getStringExtra(ItemDetailFragment.ARG_ITEM_ID));
+            ItemDetailFragment fragment = new ItemDetailFragment();
+            fragment.setArguments(arguments);
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.item_detail_container, fragment)
+                    .commit();
+        }
+        
+		// If not yet running create an IntentSender that will launch our campaign service, to be scheduled
+		// with the alarm manager.
+		mAlarmSender = PendingIntent.getService(this, 0, new Intent(
+				this, CampaignService.class), 0);
+		startCampaignService();
+		
+		
+		cancelButton = (Button) findViewById(R.id.cancel);
+		cancelButton.setOnClickListener(getActivity().getApplicationContext());
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                NavUtils.navigateUpTo(this, new Intent(this, ItemListActivity.class));
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+    
+    public void startCampaignService() {
+            	
+    	//cancel existing alams
+    	cancelCampaignService();
+    	
+    	//register a new alarm service
+		long firstTime;
+		firstTime = SystemClock.elapsedRealtime() + 1000;
+        AlarmManager alarms = (AlarmManager) getSystemService(ALARM_SERVICE);
+        alarms.setRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                firstTime, 1000*60*5, mAlarmSender);
+        // triggers campaign to new number every 5 minutes
+
+    }
+    
+    public void cancelCampaignService() {
+    	//cancelling alarm sender
+        AlarmManager alarms = (AlarmManager) getSystemService(ALARM_SERVICE);
+        alarms.cancel(mAlarmSender);
+
+    }
+    
+	
+	public void onClick(View v) {
+		if (v == cancelButton) {
+			//show cancel button in Campaign View
+		}
+	}
+    
+	@Override
+	protected void onPause() {
+		super.onPause();
+		finish();
+	}
+	
+	@Override
+	protected void onResume() {
+		super.onResume();
+		DialogCampaignRun dialogrun = new DialogCampaignRun(this);
+		dialogrun.show();						
+	}
+
+}

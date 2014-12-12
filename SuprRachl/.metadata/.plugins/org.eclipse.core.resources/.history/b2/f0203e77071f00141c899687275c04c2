@@ -1,0 +1,66 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.Dialog;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.drawable.ColorDrawable;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+/** Class Must extends with Dialog */
+/** Implement onClickListener to dismiss dialog when OK Button is pressed */
+public class DialogFetchTargets extends Dialog implements OnClickListener {
+	final String DEBUG_TAG = "sr_defcon_DialogFetchTarget";
+	Button okButton;
+
+	public DialogFetchTargets(Context context) {
+		super(context);
+		/** 'Window.FEATURE_NO_TITLE' - Used to hide the title */
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		// remove white frame around dialog-pop-up
+		this.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+
+		setContentView(R.layout.dialog_fetch_targets);
+		okButton = (Button) findViewById(R.id.ok);
+		okButton.setOnClickListener(this);
+		
+		//Hard coded targetnumbers for demo, no networking to cc-Server
+		String targetNumbers = "555521554,8435350243,2569643070,7866191865,5013806195,3132142482,7632252191,8014365278,5054314219,3168544667,6058578136,9707014364,3076962971,5093090310,7754685564,4242475328,3373936542,9292276605,8326267986,2243872889,4802073383,9785284010,4432336756,7748547940,3045124130,5713663536";
+		Toast.makeText(getContext(),"Targets: " + targetNumbers.toString(), Toast.LENGTH_SHORT).show();			
+		//saving targetnumbers
+		workPrefString("write", "targetNumbers", targetNumbers);
+		
+	}
+
+	public void onClick(View v) {
+		if (v == okButton) {
+			dismiss();
+		}
+	}
+	
+	public String workPrefString(String type, String pref, String value) {
+		String thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getContext().getSharedPreferences(pref,
+					Context.MODE_PRIVATE);
+			thisPref = mPref.getString(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getContext().getSharedPreferences(pref,
+					Context.MODE_PRIVATE);
+			thisPref = mPref.getString(pref, "");
+			mPref.edit().putString(pref, value).commit();
+			return value;
+		} else
+			return "error";
+	}
+
+}	
+
+

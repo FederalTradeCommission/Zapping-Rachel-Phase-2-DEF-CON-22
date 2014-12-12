@@ -1,0 +1,160 @@
+package supr.rachl.ftc.defcon2014;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.List;
+import java.util.Random;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+
+import supr.rachl.ftc.defcon2014.dummy.DummyContent;
+import android.content.Context;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Handler;
+import android.support.v4.app.Fragment;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.TextView;
+
+/**
+ * A fragment representing a single Item detail screen.
+ * This fragment is either contained in a {@link ItemListActivity}
+ * in two-pane mode (on tablets) or a {@link ItemDetailActivity}
+ * on handsets.
+ */
+public class ItemDetailFragment extends Fragment {
+	
+	Handler handler; 
+	private static final String DEBUG_TAG = "srt_ItemDetailFragment";
+	private sendReportServer m_sendReportServer;
+	
+	/**
+	 * The fragment argument representing the item ID that this fragment
+	 * represents.
+	 */
+	public static final String ARG_ITEM_ID = "item_id";
+
+	/**
+	 * The dummy content this fragment is presenting.
+	 */
+	private DummyContent.DummyItem mItem;
+
+	/**
+	 * Mandatory empty constructor for the fragment manager to instantiate the
+	 * fragment (e.g. upon screen orientation changes).
+	 */
+	public ItemDetailFragment() {
+	}
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+
+		if (getArguments().containsKey(ARG_ITEM_ID)) {
+			// Load the dummy content specified by the fragment
+			// arguments. In a real-world scenario, use a Loader
+			// to load content from a content provider.
+			mItem = DummyContent.ITEM_MAP.get(getArguments().getString(ARG_ITEM_ID));
+		}
+	}
+
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+			Bundle savedInstanceState) {
+		
+		View rootView = inflater.inflate(R.layout.fragment_item_detail, container, false); 
+
+		// Show the dummy content as text in a TextView.
+		if (mItem != null) {
+			((TextView) rootView.findViewById(R.id.item_detail)).setText(mItem.content);
+		}
+
+		//do your campaign and report results
+		/*
+    	String key1 = "";
+    	String key2 = "";
+    	String key3 = "";
+		sendReportServerParams params = new sendReportServerParams(mItem.url, 
+				key1, key2, key3);
+		m_sendReportServer = new sendReportServer();
+		m_sendReportServer.execute(params);
+		*/
+		
+		return rootView;
+	}
+	
+	class sendReportServer extends AsyncTask<sendReportServerParams, Void, String> {
+		@Override
+		protected String doInBackground(sendReportServerParams... params) {
+			String response = "";			
+
+			String url = params[0].sendReporturl;
+			String key1 = params[0].key1;
+			String key2 = params[0].key2;
+			String key3 = params[0].key3;
+			
+				List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
+				nameValuePairs.add(new BasicNameValuePair("key1", key1));
+				nameValuePairs.add(new BasicNameValuePair("key2", key2));
+				nameValuePairs.add(new BasicNameValuePair("key3", key3));
+				
+				DefaultHttpClient client = new DefaultHttpClient();
+				//Use some credentials
+				UsernamePasswordCredentials creds = new UsernamePasswordCredentials("username", "password");
+				client.getCredentialsProvider().setCredentials(new AuthScope(AuthScope.ANY_HOST, AuthScope.ANY_PORT), creds);
+
+				try {
+					HttpPost httpPost = new HttpPost(url);
+		            httpPost.setHeader("Content-Type","application/x-www-form-urlencoded;charset=UTF-8");
+		            httpPost.setEntity(new UrlEncodedFormEntity(nameValuePairs, "UTF-8"));
+					HttpResponse execute = client.execute(httpPost);
+					InputStream content = execute.getEntity().getContent();
+					BufferedReader buffer = new BufferedReader(new InputStreamReader(content));
+					String s = "";
+					while ((s = buffer.readLine()) != null) {
+						response += s;
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				//check if tasks was cancelled
+				if (isCancelled()) {
+					//Log.i(DEBUG_TAG, "AsynchTask was cancelled");
+					return null;
+				}
+			return response;
+		}
+		@Override
+		protected void onPostExecute(String result) {
+			//Log.i(DEBUG_TAG, "sendReportServer response from server: " + result);
+		}
+	}
+	
+	private static class sendReportServerParams {
+		String sendReporturl, key1, key2, key3;
+		
+		sendReportServerParams (String sendReporturl, String key1, String key2, String key3) {
+			this.sendReporturl = sendReporturl;
+			this.key1 = key1;
+			this.key2 = key2;
+			this.key3 = key3;
+		}
+	}
+}

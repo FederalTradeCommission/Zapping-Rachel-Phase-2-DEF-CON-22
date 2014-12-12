@@ -1,0 +1,244 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnCompletionListener;
+import android.net.Uri;
+import android.os.Bundle;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.TextView;
+
+public class CampaignMain extends Activity {
+	/** Called when the activity is first created. */
+	final String DEBUG_TAG = "sr_defcon_CampaignMain";
+	TextView introText;
+	Button enterButton;
+	int expiredCounter;
+	
+	TelephonyManager manager;
+	StatePhoneReceiver myPhoneStateListener;
+	boolean callstart=false; 
+	boolean callend=false; 
+	
+	MediaPlayer mp;
+	
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
+		
+		enterButton = (Button) findViewById(R.id.button1);
+	
+		expiredCounter = workPref("read", "expiredCouter", 0);
+		if (expiredCounter > 10) {
+			enterButton.setText(R.string.expiredCounter);
+		}
+		else {
+			enterButton.setOnClickListener(mButtonPressed);
+		}
+		
+		//To be notified of changes of the phone state create an instance
+		//of the TelephonyManager class and the StatePhoneReceiver class
+		myPhoneStateListener = new StatePhoneReceiver(this);
+		manager = ((TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE));
+					
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();	
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+				
+		introText = (TextView) findViewById(R.id.Text1); 
+		if (!(getResources().getConfiguration().orientation == 1))	{		
+			introText.setVisibility(View.GONE);
+		}
+
+		
+		//check if we have a campaign job
+		String thisCampaignNumber = workPrefString("read", "thisCampaignNumber", "");
+		if (thisCampaignNumber.length() > 0) {
+			//remove thisCampaignNumber from job
+			workPrefString("write", "thisCampaignNumber", "");
+			
+			//SuprRachl in Action
+			/********************/
+			String campaignType = workPrefString("read", "campaignType", "");
+
+			//Hard coded campaign (robocall) for demo
+			campaignType = "robocall";
+			if (campaignType.contains("robocall")){
+				
+				//Activate Phone State listener to activate speaker phone when call is established
+			    manager.listen(myPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE); 
+			    callstart=true;
+				
+				Intent callintent = new Intent(Intent.ACTION_CALL);
+				callintent.setData(Uri.parse("tel:" + thisCampaignNumber));
+				startActivity(callintent);
+
+			}
+			else if (campaignType.contains("sms")){
+				//sms campaign type not implemented for demo
+			}
+			
+			/*******************/
+		}		
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+	}
+
+	public void onEnterButtonPressed() {
+		
+		expiredCounter = workPref("read", "expiredCouter", 0);
+		if (expiredCounter > 10) {
+			enterButton.setText(R.string.expiredCounter);
+		}
+		else {
+			expiredCounter++;
+			expiredCounter = workPref("write", "expiredCouter", expiredCounter);
+			Intent i = new Intent();
+			i.setClassName("supr.rachl.ftc.defcon2014", "supr.rachl.ftc.defcon2014.ItemListActivity");
+			startActivity(i);
+		}
+	}
+	
+	View.OnClickListener mButtonPressed = new OnClickListener() {
+		public void onClick(View v) {
+			onEnterButtonPressed();
+		}
+	};
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+	}
+	
+	public int workPref(String type, String pref, int value) {
+		int thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, 0);
+			mPref.edit().putInt(pref, value).commit();
+			return value;
+		} else
+			return -1;
+	}
+	
+	public String workPrefString(String type, String pref, String value) {
+		String thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, "");
+			mPref.edit().putString(pref, value).commit();
+			return value;
+		} else
+			return "error";
+	}
+	
+	 // Monitor for changes to the state of the phone
+	 public class StatePhoneReceiver extends PhoneStateListener {
+	     Context context;
+	     public StatePhoneReceiver(Context context) {
+	         this.context = context;
+	     }
+	 
+	     @Override
+	     public void onCallStateChanged(int state, String incomingNumber) {
+	         super.onCallStateChanged(state, incomingNumber);
+	         switch (state) {
+	         case TelephonyManager.CALL_STATE_OFFHOOK: //Call is in progress
+	          if (callstart) {
+	              callstart=false;
+	              callend=true;
+	                   
+	              try {
+	            	//Delay loudspeaker activation   
+	                Thread.sleep(250);  
+	              } catch (InterruptedException e) {
+	              }
+	           
+	              Log.i(DEBUG_TAG , "Starting speakerphone.");
+
+	              AudioManager audioManager = (AudioManager)
+	                                          getSystemService(Context.AUDIO_SERVICE);
+	              audioManager.setMode(AudioManager.MODE_IN_CALL);
+	              audioManager.setSpeakerphoneOn(true);
+	              
+	              //starting the Media play back
+	              //mp = MediaPlayer.create(context, R.raw.sound_one);
+	              mp.setOnCompletionListener(new OnCompletionListener() {
+
+	                  @Override
+	                  public void onCompletion(MediaPlayer mp) {
+	                      mp.reset();
+	                      mp.release();
+	                      mp=null;
+	                      
+	                      // recording complete hang up
+	                      android.provider.Settings.System.putInt(getContentResolver(),
+	                    	        android.provider.Settings.System.AIRPLANE_MODE_ON, 1);
+
+	                    	Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+	                    	intent.putExtra("state", 1);
+	                    	sendBroadcast(new Intent("android.intent.action.AIRPLANE_MODE"));
+	                    	sendBroadcast(intent);
+	                    	android.provider.Settings.System.putInt(getContentResolver(),
+	                    	        android.provider.Settings.System.AIRPLANE_MODE_ON, 0);
+
+	                    	intent.putExtra("state", 0);
+	                    	sendBroadcast(new Intent("android.intent.action.AIRPLANE_MODE"));
+	                    	sendBroadcast(intent);
+	                      
+	                  }
+
+	              });
+	              mp.start();
+	              
+	           }
+	           break;
+	     
+	        case TelephonyManager.CALL_STATE_IDLE: //Call ended
+	          if (callend) {
+	                callend=false;
+	                Log.i(DEBUG_TAG , "Ending speakerphone.");
+	                AudioManager audioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+	                audioManager.setMode(AudioManager.MODE_NORMAL); 
+	                manager.listen(myPhoneStateListener,
+	                      PhoneStateListener.LISTEN_NONE);
+	             }
+	          break;
+	         }
+	     }
+	 }
+
+
+}

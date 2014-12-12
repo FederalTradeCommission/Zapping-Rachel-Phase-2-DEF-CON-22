@@ -1,0 +1,53 @@
+package supr.rachl.ftc.defcon2014;
+
+import android.app.Dialog;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.TextView;
+
+/** Class Must extends with Dialog */
+/** Implement onClickListener to dismiss dialog when OK Button is pressed */
+public class DialogFetchTargets extends Dialog implements OnClickListener {
+	Button okButton;
+	final String DEBUG_TAG = "sr_defcon_DialogFetchTarget";
+
+	String numbers = "";
+
+	public Dialog(Context context) {
+		super(context);
+		/** 'Window.FEATURE_NO_TITLE' - Used to hide the title */
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
+		// remove white frame around dialog-pop-up
+		this.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+
+		setContentView(R.layout.dialog_fetch_targets);
+		okButton = (Button) findViewById(R.id.ok);
+		okButton.setText(context.getString(R.string.button_next));
+		okButton.setOnClickListener(this);
+	}
+
+	public void onClick(View v) {
+		if (v == okButton) {
+			//get numbers and clean
+			//save valid numbers
+		
+			//number = MainMenu.CleanNumber(number, 0);
+			//workPrefString("write", "csettings_lastNumber", number);
+			//workPref("write", "csettings_lastType", 0);
+
+		
+			// Toast.makeText(getApplicationContext(),customDialog_EditText.getText().toString()
+			// , Toast.LENGTH_SHORT).show();
+			dismiss();
+		}
+	}
+
+}	
+
+

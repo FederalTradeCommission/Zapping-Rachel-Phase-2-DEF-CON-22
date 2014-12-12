@@ -1,0 +1,199 @@
+package com.devlab.dpb;
+
+import android.app.Activity;
+import android.app.Dialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnKeyListener;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.KeyEvent;
+import android.view.View;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+import com.google.analytics.tracking.android.EasyTracker;
+
+public class DialogEnterNumberReport extends Activity {
+
+	final String LOG_TAG = "nc_DialogEnterNumberReport";
+	public static final boolean DEBUG = Constants.DEBUG;
+	public String number = "";
+	static final int CUSTOM_DIALOG_ID = 1;
+
+	EditText customDialog_EditText;
+	Button customDialog_Save;
+
+	/** Called when the activity is first created. */
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		// Apply custom language
+		CustomLanguage.updateLanguage(this);
+		
+		// Tablet UI switch
+		switch (MainMenu.screenSize(getApplicationContext())) {
+		case Configuration.SCREENLAYOUT_SIZE_NORMAL: { 
+			if (DEBUG)
+				Log.d(LOG_TAG, "Regular display size, force portrait");	
+			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+		}
+		break;
+		case Configuration.SCREENLAYOUT_SIZE_LARGE: { 
+			if (DEBUG)
+				Log.d(LOG_TAG, "Large display size, let user decide");	
+		}
+		break;
+		case Configuration.SCREENLAYOUT_SIZE_XLARGE: { 
+			if (DEBUG)
+				Log.d(LOG_TAG, "Extra Large display size, force landscape");
+			setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+		}
+		break;
+		}
+		
+		showDialog(CUSTOM_DIALOG_ID);
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		if (DEBUG)
+			Log.d(LOG_TAG, "OnStart called");
+		// Google Analytics Start
+		EasyTracker.getInstance(this).activityStart(this);
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+		// Google Analytics Stop
+		EasyTracker.getInstance(this).activityStop(this);
+	}
+
+	private Button.OnClickListener customDialog_SaveOnClickListener = new Button.OnClickListener() {
+
+		public void onClick(View arg0) {
+			// TODO Auto-generated method stub
+
+			number = customDialog_EditText.getText().toString();
+			// before cleaning - check for global spammer
+			if (MainMenu.isGlobalSpammer(number)) {workPref("write", "csettings_lastGlobal", 1);}
+			else {workPref("write", "csettings_lastGlobal", 0);}
+			number = MainMenu.CleanNumber(number, 0);
+			// Updating last number record
+			workPrefString("write", "csettings_lastNumber", number);
+			workPref("write", "csettings_lastType", 0);
+
+			if (DEBUG)
+				Log.d(LOG_TAG, "Number length entered " + number.length());
+
+			if (number.length() < 1) {
+				Toast.makeText(getApplicationContext(),
+						R.string.error_txt_enternumber, Toast.LENGTH_SHORT)
+						.show();
+			} else {
+				dismissDialog(CUSTOM_DIALOG_ID);
+
+				Intent i = new Intent();
+				i.setClassName("com.devlab.dpb", "com.devlab.dpb.ReportNumber");
+				i.putExtra("ReportNumber", number);
+				startActivity(i);
+
+				if (DEBUG)
+					Log.d(LOG_TAG, "WebView callled:"
+							+ customDialog_EditText.getText().toString());
+				// Toast.makeText(getApplicationContext(),customDialog_EditText.getText().toString()
+				// , Toast.LENGTH_SHORT).show();
+
+				finish();
+			}
+		}
+
+	};
+
+	@Override
+	protected Dialog onCreateDialog(int id) {
+		// TODO Auto-generated method stub
+		Dialog dialog = null;
+		switch (id) {
+		case CUSTOM_DIALOG_ID:
+			dialog = new Dialog(this);
+			dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+			dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+
+			dialog.setContentView(R.layout.dialog_enter_numberreport);
+
+			customDialog_EditText = (EditText) dialog
+					.findViewById(R.id.dialogedittext);
+			customDialog_Save = (Button) dialog.findViewById(R.id.save);
+			customDialog_Save
+					.setOnClickListener(customDialog_SaveOnClickListener);
+
+			dialog.setOnKeyListener(new OnKeyListener() {
+				public boolean onKey(DialogInterface dialog, int keyCode,
+						KeyEvent event) {
+					if ((keyCode == KeyEvent.KEYCODE_BACK)) {
+						finish();
+						return true;
+					}
+					return false;
+				}
+			});
+
+			break;
+		}
+		return dialog;
+	}
+
+	@Override
+	public void onBackPressed() {
+		if (DEBUG)
+			Log.d(LOG_TAG, "onBackPressed called .");
+		finish();
+	}
+	
+	public int workPref(String type, String pref, int value) {
+		int thisPref;
+
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, value);
+			return thisPref;
+		}
+
+		else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getInt(pref, 0);
+			mPref.edit().putInt(pref, value).commit();
+			return value;
+		} else
+			return -1;
+	}
+	
+	public String workPrefString(String type, String pref, String value) {
+		String thisPref;
+		if (type == "read") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, value);
+			return thisPref;
+		} else if (type == "write") {
+			final SharedPreferences mPref = getSharedPreferences(pref,
+					MODE_PRIVATE);
+			thisPref = mPref.getString(pref, "");
+			mPref.edit().putString(pref, value).commit();
+			return value;
+		} else
+			return "error";
+	}
+
+}
