@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <string name="app_name">Supr Rachl</string>
-    <string name="title_item_detail">Supr Rachl Campaign</string>
-    <string name="expiredCounter">EXPIRED</string>
-
-</resources>
